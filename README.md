@@ -1,8 +1,8 @@
 # Personal dashboard chrome extension 
 
 ### screenshots
-![image](/screenshot/screenshot-one.png)
-![image](/screenshot/screenshot-two.png)
+![image](/screenshots/screenshot-one.png)
+![image](/screenshots/screenshot-two.png)
 
 ## Description
 + This is a personal dashboard chrome extension that provides a user-friendly interface for displaying various information.
