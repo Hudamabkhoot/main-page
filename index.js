@@ -3,6 +3,8 @@ const quoteBtn  = document.getElementById('quote-btn')
 const bookBtn = document.getElementById('book-btn')
 const searchForm = document.getElementById('search-form')
 const feed = document.getElementById('book-feed')
+const cancelBtn = document.getElementById('cancel-btn');
+
 let getbooksArr = [] // from api //
 let books = [] // put data in obj //
 
@@ -16,9 +18,14 @@ document.addEventListener('click', function(e){
         addCurrentBookArr(e.target.dataset.add)
     }
     else if (e.target.dataset.remove){
-        removeCurrentBook()
+        removeCurrentBook(e.target.dataset.remove)
     }
 })
+
+cancelBtn.addEventListener('click', function() {
+    clearSearchResults();
+});
+
 
  //get random background img from API
 
@@ -43,7 +50,6 @@ fetch("https://apis.scrimba.com/unsplash/photos/random?orientation=landscape&que
       })
             .then(res => res.json()) // parse response as JSON
             .then(data => {
-              console.log(data[0].joke)
               document.getElementById("meme").innerHTML = `<p>${data[0].joke}</p>`
     
             })
@@ -81,32 +87,41 @@ navigator.geolocation.getCurrentPosition(position => {
         .catch(err => console.error(err))
 });
 
- //get book cover from API
-const key = 'AIzaSyDSen0RLTOVMHbemDUEtVO04OSzwyvKkNo'
+const key = 'AIzaSyDSvzkJDgfmb3lo8yP04qN0gw2wdKlxXpY'
 
 searchForm.addEventListener("submit", (e) => { 
     e.preventDefault();
     const searchValue =  document.getElementById('book-value').value.trim()
-    //console.log(searchValue)
+
     if (searchValue) {
-fetch(`https://www.googleapis.com/books/v1/volumes?q=${searchValue}&key=${key}`)
-    .then(res => res.json())
-    .then(data => {
-        
-        //console.log(data.items)   
-        let booksList = data.items
-        getbooksArr.push(booksList) 
-        for (let bookDetails of getbooksArr) {
-            for (let pickedBookArr of bookDetails) {
-                let info = pickedBookArr.volumeInfo
-                createBooksArr(info)
-        }
+        feed.innerHTML = '';
+        getbooksArr = [];
+        books = []
+        fetch(`https://www.googleapis.com/books/v1/volumes?q=${searchValue}&key=${key}`)
+            .then(res => res.json())
+            .then(data => {
+                console.log(data)
+                if (data.items && data.items.length > 0) { 
+                    let booksList = data.items;
+                    getbooksArr.push(booksList);
+                    for (let bookDetails of getbooksArr) {
+                        for (let pickedBookArr of bookDetails) {
+                            let info = pickedBookArr.volumeInfo;
+                            createBooksArr(info);
+                        }
+                    }
+                    for (let book of books) {
+                        renderBook(book);
+                    }
+                    feed.classList.add('book-feed');
+                } else {
+                    console.log("No books found for the search query.");
+                }
+            })
+            .catch(err => console.error(err));
     }
-    })
-    }
-    for (let book of books){
-        renderBook(book)
-    }
+    
+    
     searchForm.reset();
 })
 
@@ -120,58 +135,66 @@ function renderBook(item){
                         `
     }
 
-function createBooksArr(book){ 
-
-    const booksInfo = {
-        title: book.title,
-        cover: book.imageLinks.thumbnail,
-        id: book.industryIdentifiers[0].identifier
+    function createBooksArr(book) {
+        const booksInfo = {
+            title: book.title,
+            cover: book.imageLinks ? book.imageLinks.thumbnail : '', 
+            id: book.industryIdentifiers && book.industryIdentifiers.length > 0 ? book.industryIdentifiers[0].identifier : '' 
         };
-
-        books.push(booksInfo)
-}
+    
+        books.push(booksInfo);
+    }
 
 
 
 function addCurrentBookArr(bookId){ 
-    const targetBooktObj = books.filter(function(targetBook) {
-        return targetBook.id === bookId
-    })[0]
-    console.log(targetBooktObj)
-    TBR.push(targetBooktObj)
-    localStorage.setItem("TBR",JSON.stringify(TBR));
+    const targetBooktObj = books.find(targetBook => targetBook.id === bookId);
+    if (targetBooktObj) {
+        TBR.push(targetBooktObj);
+        localStorage.setItem("TBR", JSON.stringify(TBR));
+        currentBook.push(targetBooktObj); 
+        renderCurrentBook(); 
+    } else {
+        console.log("Book not found.");
+    }
 }
 
 
 // Current book feed
 
 function renderCurrentBook(){
-    let result = ''
+    let result = '';
     if (currentBook != null && currentBook.length > 0) {
-        for (let item of currentBook){
-            result = `
-                    <div class="book-el">
+        currentBook.forEach(item => {
+            result += `
+                <div class="book-el">
                     <img src="${item.cover}" class="book-img">
-                    <button class="remove-btn icon" data-remove="${item.id}"></button
-                    </div>
-                `  
-        }  
-        }
-        feed.innerHTML = result
+                    <button class="remove-btn icon" data-remove="${item.id}"></button>
+                </div>
+            `;
+        });
+    }else {
+        // If currentBook array is empty, display the message
+        result = '<p class="current-read">Add your current read!</p>';
     }
-   
-
-function removeCurrentBook(){ 
-    if (currentBook.length > -1) {
-        currentBook.length = 0
-            localStorage.setItem("TBR",JSON.stringify(currentBook));
-            JSON.parse(localStorage.getItem("TBR"));
-    }
-    feed.innerHTML = '' 
-    console.log(currentBook)     
-    reload(currentBook)
+    feed.innerHTML = result;
 }
 
+   
+
+function removeCurrentBook(bookId){ 
+    const index = currentBook.findIndex(item => item.id === bookId);
+    if (index !== -1) {
+        currentBook.splice(index, 1); 
+        localStorage.setItem("TBR", JSON.stringify(currentBook));
+        renderCurrentBook(); 
+    }
+}
+
+function clearSearchResults() {
+    feed.innerHTML = ''; 
+    renderCurrentBook(); 
+}
 
 function reload(item){
     if (item.length === 0) {
